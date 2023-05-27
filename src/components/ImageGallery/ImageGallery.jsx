@@ -1,30 +1,28 @@
-
-import PropTypes from "prop-types"
-import { ImageGalleryItem } from "components/ImageGalleryItem/ImageGalleryItem"
 import css from './ImageGallery.module.css';
+import PropTypes from 'prop-types';
+import {ImageGalleryItem} from '../ImageGalleryItem/ImageGalleryItem';
 
-export const ImageGallery = ({images, controlModal}) => { 
+export const ImageGallery = ({ images, openModal }) => (
+  <ul className={css.gallery}>
+    {images.map(({ id, webformatURL, largeImageURL }) => (
+      <ImageGalleryItem
+        key={id}
+        webformatURL={webformatURL}
+        largeImageURL={largeImageURL}
+        openModal={openModal}
+      />
+    ))}
+  </ul>
+);
 
-    return (
-    
-<ul className={css.gallery}>
-        {images.map(item => (
-          <ImageGalleryItem item={item} key={item.id} 
-            controlModal={controlModal}
-          onClick={(evt) =>
-            { controlModal (item.largeImageURL, item.tags); }}/>
-        ))}
-     
-      </ul>
-
-  
-)
-}
 ImageGallery.propTypes = {
-  images: PropTypes.shape({
-    webformatURL: PropTypes.string.isRequired,
-    largeImageURL: PropTypes.string.isRequired,
-    tags: PropTypes.string.isRequired,
-  }).isRequired,
-    controlModal: PropTypes.func.isRequired,
-}
+  images: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number,
+      webformatURL: PropTypes.string,
+      largeImageURL: PropTypes.string,})
+  ),
+  openModal: PropTypes.func,
+};
+
+

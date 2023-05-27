@@ -1,141 +1,104 @@
-import {
-  Toaster, toast} from 'react-hot-toast';
+import { useState, useEffect } from 'react';
+import {findPic} from '../services/api'
+import '../index.css';
+import {Searchbar} from './Searchbar/Searchbar';
+import {ImageGallery} from './ImageGallery/ImageGallery';
+import {Button} from './Button/Button';
+import {Modal} from './Modal/Modal';
+import {Loader} from './Loader/Loader';
 
-import { Button } from "./Button/Button";
-import { ImageGallery } from "./ImageGallery/ImageGallery";
-import { Loader } from "./Loader/Loader";
-import { Modal } from "./Modal/Modal";
-import { Searchbar } from "./Searchbar/Searchbar";
-import { Component } from 'react';
-import { findPic } from '../api/findPic'
-
-
-export class App extends Component {
-  state = {
-    search: '',
-    images: [],
-    page: 1,
-    total: 1,
-    isLoading: false, 
-    error: null,
+export const App = () => {
+  const [searchValue, setSearchValue] = useState('');
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [images, setImages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState(null);
+  const [modal, setModal] = useState({
     showModal: false,
-    empty: false,
-}
-  
-// const handleChange = event => {
-//     setInputValue(event.target.value);
-//   };
+    largeImageURL: '',
+  });
+  const [noResults, setNoResults] = useState(false);
 
-  componentDidUpdate(prevProps, prevState) {
-const {search, page} = this.state
-    if (
-      prevState.search !== search ||
-      prevState.page !== page
-    ) {
-      this.getData(search, page);
-    }
-  }
-      
-     getData = (titlePic, page) => {
-       this.setState({ isLoading: true });
-       
-     findPic(titlePic, page)
-      .then(response => response.json())
-      .then(data => {
-
-          if (data.hits.length === 0) {
-          this.setState({ empty: true });
-        }
-       this.setState(prevState => ({
-         images: [...prevState.images, ...data.hits], 
-         total: data.total,
-         page: prevState.page,
-        }));
-      })
-       .catch(error => {
-         this.setState({ error: error.message });
-       }) 
-      .finally(() => {
-        this.setState({ isLoading: false }); 
-      });
+  const onChange = event => {
+    setSearchValue(event.target.value);
   };
 
-   loadingMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1, 
-    }));
-  };
+  const onSubmit = e => {
+    e.preventDefault(); 
 
-   openModal = (largeImageURL, alt) => {
-    this.setState(({ showModal }) => {
-      return { showModal: !showModal, largeImageURL, alt };
-    });
-  };
-
-  closeModal = () => {
-    this.setState(({ showModal }) => {
-      
-      return { showModal: !showModal };
-    });
-  };
-  handleSubmit = (value) => {
-    if (value === this.state.search) {
-      toast.error('It is the same query');
+    if (searchValue === '') {
+      alert('Please enter your query'); 
       return;
-}
-    this.setState({
-      search: value,
-    images: [],
-    page: 1,
-    total: 1,
-    isLoading: false, 
-    error: null,
-    empty: false,
-    });
-}
+    }
 
-  render() {
-    
-    const { error, isLoading, images, total, page } = this.state;
- 
-    return (
+    if (query === searchValue) return; 
+    setImages([]);
+    setQuery(searchValue);
+    setPage(1);
+  };
+
+  const loadingMore = () => { 
+    setPage(prevState => prevState + 1);
+  };
+
+  const controlModal = () => {
+    setModal(prevState => ({ ...prevState, showModal: !prevState.showModal })); 
+  };
+
+  const openModal = largeImageURL => {
+    setModal(prevState => ({ ...prevState, largeImageURL }));
+    controlModal();
+  };
+
+  useEffect(() => {
+    if (page === 0) return;
+
+    const fetchImagesByQuery = async searchQuery => {
+      setIsLoading(true); 
+      setError(null); 
+      setNoResults(false);
+
+      try {
+        const response = await findPic(searchQuery, page);
+        setImages(prevState => [...prevState, ...response.hits]);
+        setTotal(Math.ceil(response.totalHits / 12));
+        response.totalHits === 0 && setNoResults(true); 
+
+      } catch (error) {
+        setError(error);
+      } finally {
+        setIsLoading(false); 
+      }
+    };
+
+    fetchImagesByQuery(query);
+  }, [page, query]);
+
+  return (
+    <div className="App">
+      <Searchbar
+        onSubmit={onSubmit}
+        onChange={onChange}
+        searchValue={searchValue}
+      />
       <div>
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            duration: 3000,
-     
-            style: {
-              fontSize: '28px',
-              // color: '#fff',
-            }
-          }}
-        />
-        <Searchbar handleSubmit={this.handleSubmit} />
-        {error && (
-          <h3>Something happed ({error}), please try again </h3>
-        )}
+        {error && <p className="notification">Something happend: {error.message}</p>}
 
+        {noResults && <p className="notification">Sorry, we didn't find such query </p>}
 
-        <ImageGallery controlModal={this.openModal} images={images} />
-        
-        {isLoading && <Loader  />}
-
-        {this.state.empty && (
-          <h3 style={{color: '#FF35ff', textAlign: 'center', fontSize: '36px'}}>We don't have such images</h3>
-        )}
-
-      
-       {total / 12 > page && <Button loadingMore={this.loadingMore} />}
-      
-        {this.state.showModal && (
-          <Modal closeModal={this.closeModal}>
-            <img src={this.state.largeImageURL} alt={this.state.alt} />
-          </Modal>
-        )}
-        
+        {isLoading && <Loader />}
+        <ImageGallery images={images} openModal={openModal} />
       </div>
-    );
-  }
+      {page < total && !isLoading ? (
+        <Button loadingMore={loadingMore} />
+      ) : (
+        <div></div>
+      )}
+      {modal.showModal && <Modal controlModal={controlModal} largeImageURL={modal.largeImageURL} />}
+    </div>
+  );
 };
+
 

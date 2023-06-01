@@ -7,6 +7,7 @@ export const Modal = ({ controlModal, largeImageURL }) => {
     const handleKeyPress = e => {
       if (e.code === 'Escape') {
         controlModal();
+        console.log("key");
       }
     };
 
@@ -15,9 +16,13 @@ export const Modal = ({ controlModal, largeImageURL }) => {
       window.removeEventListener('keydown', handleKeyPress); 
     };
   }, [controlModal]);
-
+  
+ const handleBackdrop = event => {
+   if (event.target === event.currentTarget)
+     controlModal();
+  };
   return (
-    <div className={css.overlay} onClick={controlModal}>
+    <div className={css.overlay} onClick={handleBackdrop}>
       <div className={css.modal}
       >
         <img src={largeImageURL} alt="" />
@@ -27,7 +32,7 @@ export const Modal = ({ controlModal, largeImageURL }) => {
 };
 
 Modal.propTypes = {
-  largeImageURL: PropTypes.string,
-  controlModal: PropTypes.func,
+  largeImageURL: PropTypes.string.isRequired,
+  controlModal: PropTypes.func.isRequired,
 };
 
